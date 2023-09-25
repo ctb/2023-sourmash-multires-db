@@ -86,6 +86,7 @@ class Layer:
         best_group = None
 
         ## here, probably want to collect all equal matches, not just best CTB
+        ## CTB: do this search using a database/Index API.
         for group_id, subj_mh in self.groups.items(limit_set):
             i += 1
             c = query_mh.count_common(subj_mh)
