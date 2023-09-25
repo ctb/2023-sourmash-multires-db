@@ -1,8 +1,5 @@
 #! /usr/bin/env python
-import sys
-import argparse
 import sourmash
-
 from collections import defaultdict
 
 
@@ -128,6 +125,9 @@ class MultiResolutionDatabase:
             ll.add_sketch(idx, ss)
 
     def best_overlap(self, query):
+        "find the best overlap using all the layers"
+
+        # search all the layers, limiting as we go
         limit_to = None
         for ll in reversed(self.layer_list):
             best_c, x = ll.best_overlap(query, limit_to)
@@ -135,6 +135,7 @@ class MultiResolutionDatabase:
             if x:
                 limit_to = x
 
+        # found something? get full sketch. otherwise, nada.
         if x:
             assert best_c > 0
             best_match_idx = x.pop()
@@ -145,6 +146,7 @@ class MultiResolutionDatabase:
             return 0, None
 
     def gather(self, orig_query):
+        "execute a gather."
         best_c, best_match = self.best_overlap(orig_query)
         query_mh = orig_query.minhash.to_mutable()
 
@@ -155,33 +157,3 @@ class MultiResolutionDatabase:
 
             query = sourmash.SourmashSignature(query_mh)
             best_c, best_match = self.best_overlap(query)
-
-
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument('query')
-    p.add_argument('zipfile_db')
-    p.add_argument('-s', '--min-scaled', default=1000)
-    p.add_argument('-M', '--max-scaled', default=100000)
-    p.add_argument('-k', '--ksize', default=31)
-    args = p.parse_args()
-
-    query = sourmash.load_file_as_index(args.query,)
-    query = query.select(ksize=args.ksize, scaled=args.min_scaled)
-    query = list(query.signatures())
-    assert len(query) == 1, len(query)
-    query = query[0]
-
-    idx = sourmash.load_file_as_index(args.zipfile_db)
-    idx = idx.select(ksize=args.ksize, scaled=args.min_scaled)
-
-    mrd = MultiResolutionDatabase()
-
-    for ss in idx.signatures():
-        mrd.add_sketch(ss)
-
-    mrd.gather(query)
-
-
-if __name__ == '__main__':
-    sys.exit(main())
